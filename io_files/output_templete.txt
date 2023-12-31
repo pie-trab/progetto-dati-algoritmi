@@ -1,0 +1,7 @@
+server, categories, n-job, n-ran, polices
+[SE n-ran =1, n-job <= 10, policy = 0]
+tempo esecuzione, service time, cateegoria job
+[PER TUTTE LE RUN]
+ET(A) mediato su tutte le run
+AQT-all(A) mediato su tutte le run
+Nr, AQT(A, r), average service time per Cr, mediato su tutte le run
