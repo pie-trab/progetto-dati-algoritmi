@@ -39,6 +39,8 @@ public class Event implements Comparable<Event> {
         this.serviceTime = serviceTime;
     }
 
+
+
     public void setIdServer(int idServer) {
         this.idServer = idServer;
     }

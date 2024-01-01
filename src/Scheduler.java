@@ -18,9 +18,7 @@ public class Scheduler {
     private int rRuns;
     private int pPolicy;
 
-
-    public void initScheduler(String filePath) {
-        // data from file
+    public void getParameters(String filePath) {
         try {
             File inputFile = new File(filePath);
             Scanner myReader = new Scanner(inputFile);
@@ -51,6 +49,11 @@ public class Scheduler {
         } catch (Exception e) {
             System.err.println(e.getMessage() + " " + e.getCause());
         }
+    }
+
+    public void initScheduler() {
+        servers = new ArrayList<>(kServers);
+        prQueue = new PriorityQueue<>(nJobs);
 
         // init servers
         for (int i = 0; i < kServers; i++) {
@@ -66,45 +69,52 @@ public class Scheduler {
 
             prQueue.add(new Event(true, arrTemp, i));
         }
+    }
 
+    public void schedule(String filePath) {
         // K, H, N, R, P
         System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
 
-    }
+        double tempETa = 0, ETa = 0;
+        int servCount = 0;
 
-    public void schedule() {
-        double ETa = 0;
+
+        //prQueue = new PriorityQueue<>(nJobs);
+        //servers = new ArrayList<>(kServers);
+        getParameters(filePath);
+        initScheduler();
+
         for (int j = 0; j < rRuns; j++) {
-            int i = 0, executed = 0, servCount = 0;
-
+            int  i = 0, executed = 0;
+            if (j != 0) initScheduler();
             while (i != nJobs || executed != nJobs) {
                 Event event = prQueue.poll();
+                //System.out.println("E: " + event);
                 //System.out.println("prima: " + printPrQueue());
 
                 if (event.isArrival()) {
                     if (servers.get(servCount % kServers).addEvent(event)) {
-                        //Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
                         Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
                         temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
                         temp.setIdServer(servCount % kServers);
                         //System.out.println("category: " + event.getCat());
                         //System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
                         //System.out.println("Exec J: " + temp);
-
-
                         prQueue.add(temp);
                     }
                     servCount++;
-                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
+                    if (i < nJobs) {
+                        prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
+                    }
 
                     if (i < nJobs) {
-                        System.out.println(event);
+                        if (nJobs < 20) System.out.println(event);
                         i++;
                     }
                 }
 
                 if (!event.isArrival()) {
-                    ETa = event.getTime();
+                    tempETa = event.getTime();
                     Event polled = servers.get(event.getIdServer()).executeJob();
                     if (!servers.get(event.getIdServer()).isEmpty()) {
                         Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
@@ -113,28 +123,103 @@ public class Scheduler {
                         prQueue.add(temp);
                     }
                     if (executed < nJobs) {
-                        System.out.println(event);
+                        if (nJobs < 20) System.out.println(event);
                         executed++;
                     }
                 }
 
+                //int sCount = 0;
+                //for (Server s : servers) {
+                //    System.out.println("S" + sCount + ": " + s);
+                //    sCount++;
+                //}
 
-                // TODO qualche problema con i server
-
-                // System.out.println("S1: " + servers.get(0));
-                // System.out.println("S2: " + servers.get(1));
-
-
+                //System.out.println("toPrint: " + toPrint);
                 //System.out.println("dopo: " + printPrQueue());
                 //System.out.println("--------");
                 //System.out.println();
 
 
             }
-            System.out.println(ETa);
+            System.out.println("tmp: " + tempETa);
+            ETa += tempETa;
+
         }
+        System.out.println(ETa / rRuns);
 
     }
+
+    public void schedulelelelle() {
+        double tempETa = 0, ETa = 0;
+        int servCount = 0, i = 0, executed = 0;
+
+        while (i != nJobs * rRuns || executed != nJobs * rRuns) {
+
+
+            Event event = prQueue.poll();
+            //System.out.println("E: " + event);
+            //System.out.println("prima: " + printPrQueue());
+
+            if (event.isArrival()) {
+                if (servers.get(servCount % kServers).addEvent(event)) {
+                    Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
+                    temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
+                    temp.setIdServer(servCount % kServers);
+                    //System.out.println("category: " + event.getCat());
+                    //System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
+                    //System.out.println("Exec J: " + temp);
+                    prQueue.add(temp);
+                }
+                servCount++;
+                if (i < nJobs)
+                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
+
+                if (i < nJobs) {
+                    if (nJobs < 20) System.out.println(event);
+                    i++;
+                }
+            }
+
+            if (!event.isArrival()) {
+                tempETa = event.getTime();
+                Event polled = servers.get(event.getIdServer()).executeJob();
+                if (!servers.get(event.getIdServer()).isEmpty()) {
+                    Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
+                    temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
+                    temp.setIdServer(event.getIdServer());
+                    prQueue.add(temp);
+                }
+                if (executed < nJobs) {
+                    if (nJobs < 20) System.out.println(event);
+                    executed++;
+                }
+            }
+
+
+            if (executed % nJobs == 0) {
+                ETa += tempETa;
+            }
+
+            // TODO qualche problema con i server
+
+            //int sCount = 0;
+            //for (Server s : servers) {
+            //    System.out.println("S" + sCount + ": " + s);
+            //    sCount++;
+            //}
+
+            //System.out.println("toPrint: " + toPrint);
+            //System.out.println("dopo: " + printPrQueue());
+            //System.out.println("--------");
+            //System.out.println();
+
+
+        }
+        System.out.println("Eta run: " + tempETa);
+        System.out.println(ETa / rRuns);
+
+    }
+
 
     public String printPrQueue() {
         String str = "";
