@@ -3,6 +3,7 @@ import java.util.NoSuchElementException;
 
 public class Server {
     private LinkedList<Event> queue;
+    private double totalTime;
 
     public Server() {
         queue = new LinkedList<Event>();
@@ -10,6 +11,7 @@ public class Server {
 
     public boolean addEvent(Event e) {
         boolean temp = queue.isEmpty();
+        totalTime += e.getTime();
         queue.add(e);
         return temp;
     }

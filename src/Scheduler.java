@@ -62,17 +62,47 @@ public class Scheduler {
 
         // init queue
         prQueue = new PriorityQueue<Event>();
-
-        // add event to queue
         for (int i = 0; i < hCategories; i++) {
-            double arrTemp = categories.get(i).newArrival();
+            prQueue.add(new Event(true, categories.get(i).newArrival(), i));
+        }
+    }
 
-            prQueue.add(new Event(true, arrTemp, i));
+    public void testSchedule(String filePath) {
+        int generated = 0, executed = 0, serverCount = 0;
+        getParameters(filePath);
+        initScheduler();
+
+        while (executed != nJobs) {
+            Event ev = prQueue.poll();
+
+            if (ev.isArrival() && executed < nJobs) {
+                // this tells me it the server is empty
+                if (servers.get(serverCount % kServers).addEvent(ev)) {
+                    Event temp = new Event(false, ev.getTime() + categories.get(ev.getCat()).newService(), ev.getCat());
+                    temp.setServiceTime(categories.get(ev.getCat()).getServiceTime());
+                    temp.setIdServer(serverCount % kServers);
+                    prQueue.add(temp);
+                }
+                if (nJobs < 20){
+                    System.out.println(ev);
+                    prQueue.add(new Event(true, ev.getTime() + categories.get(ev.getCat()).newArrival(), ev.getCat()));
+                }
+                serverCount++;
+            }
+
+            // execute firts nJobs
+            if (!ev.isArrival() && generated < nJobs) {
+
+            }
+
+
+
+
         }
     }
 
     public void schedule(String filePath) {
-        double tempETa = 0, ETa = 0;
+        double tempETa = 0, ETa = 0, AQTall = 0;
         int servCount = 0;
 
         //prQueue = new PriorityQueue<>(nJobs);
@@ -83,9 +113,8 @@ public class Scheduler {
         System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
 
         for (int j = 0; j < rRuns; j++) {
-            int  i = 0, executed = 0, count = 0;
-            initScheduler(); // TODO prova a fare questo con la versione while (gli if per controllare se è da stampare o meno)
-            // if (j != 0)
+            int i = 0, executed = 0, count = 0;
+            initScheduler();
             while (i != nJobs || executed != nJobs) {
                 Event event = prQueue.poll();
                 //System.out.println("E: " + event);
@@ -100,9 +129,9 @@ public class Scheduler {
                             temp.setToPrint(true);
                             count++;
                         }
-                        //System.out.println("category: " + event.getCat());
-                        //System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
-                        //System.out.println("Exec J: " + temp);
+                        // System.out.println("category: " + event.getCat());
+                        // System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
+                        // System.out.println("Exec J: " + temp);
                         prQueue.add(temp);
                     }
                     servCount++;
@@ -115,13 +144,14 @@ public class Scheduler {
                 }
 
                 if (!event.isArrival()) {
-                    if (event.isToPrint()) tempETa = event.getTime();
-                    Event polled = servers.get(event.getIdServer()).executeJob();
+                    tempETa = event.getTime(); // TODO tutti o solo quelli da stampare? in ogni caso viene sbagliato
+                    if (event.isToPrint()) AQTall += event.getTime() - event.getServiceTime();
+                    servers.get(event.getIdServer()).executeJob();
                     if (!servers.get(event.getIdServer()).isEmpty()) {
                         Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
                         temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
                         temp.setIdServer(event.getIdServer());
-                        if(count < nJobs){
+                        if (count < nJobs) {
                             temp.setToPrint(true);
                             count++;
                         }
@@ -133,32 +163,35 @@ public class Scheduler {
                     }
                 }
 
-                //int sCount = 0;
-                //for (Server s : servers) {
-                //    System.out.println("S" + sCount + ": " + s);
-                //    sCount++;
-                //}
-
                 //System.out.println("toPrint: " + toPrint);
                 //System.out.println("dopo: " + printPrQueue());
                 //System.out.println("--------");
                 //System.out.println();
-
-
             }
-            System.out.println("tmp: " + tempETa);
+            //System.out.println("tmp: " + tempETa);
             ETa += tempETa;
-
         }
         System.out.println(ETa / rRuns);
-
+        System.out.println(AQTall / (nJobs * rRuns));
     }
 
-    public void schedulelelelle() {
-        double tempETa = 0, ETa = 0;
-        int servCount = 0, i = 0, executed = 0;
+    public void while_schedule(String filePath) {
+        double tempETa = 0, ETa = 0, AQTall = 0;
+        int servCount = 0;
 
+        //prQueue = new PriorityQueue<>(nJobs);
+        //servers = new ArrayList<>(kServers);
+        getParameters(filePath);
+
+        // K, H, N, R, P
+        System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
+
+
+        initScheduler(); // TODO prova a fare questo con la versione while (gli if per controllare se è da stampare o meno)
+
+        int i = 0, executed = 0, count = 0, runs = 0;
         while (i != nJobs * rRuns || executed != nJobs * rRuns) {
+            if (executed % nJobs == 0 && executed != 0) initScheduler();
 
 
             Event event = prQueue.poll();
@@ -170,42 +203,47 @@ public class Scheduler {
                     Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
                     temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
                     temp.setIdServer(servCount % kServers);
-                    //System.out.println("category: " + event.getCat());
-                    //System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
-                    //System.out.println("Exec J: " + temp);
+                    if (count < nJobs * rRuns) {
+                        temp.setToPrint(true);
+                        count++;
+                    }
+                    // System.out.println("category: " + event.getCat());
+                    // System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
+                    // System.out.println("Exec J: " + temp);
                     prQueue.add(temp);
                 }
                 servCount++;
-                if (i < nJobs)
-                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
 
-                if (i < nJobs) {
+                if (i < nJobs * rRuns) {
                     if (nJobs < 20) System.out.println(event);
+                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
                     i++;
                 }
             }
 
             if (!event.isArrival()) {
-                tempETa = event.getTime();
-                Event polled = servers.get(event.getIdServer()).executeJob();
+                if (executed % nJobs == 0) {
+                    tempETa = event.getTime(); // TODO tutti o solo quelli da stampare? in ogni caso viene sbagliato
+                    System.out.println("tmp: " + tempETa);
+                    ETa += tempETa;
+                }
+                if (event.isToPrint()) AQTall += event.getServiceTime();
+                servers.get(event.getIdServer()).executeJob();
                 if (!servers.get(event.getIdServer()).isEmpty()) {
                     Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
                     temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
                     temp.setIdServer(event.getIdServer());
+                    if (count < nJobs * rRuns) {
+                        temp.setToPrint(true);
+                        count++;
+                    }
                     prQueue.add(temp);
                 }
-                if (executed < nJobs) {
+                if (executed < nJobs * rRuns) {
                     if (nJobs < 20) System.out.println(event);
                     executed++;
                 }
             }
-
-
-            if (executed % nJobs == 0) {
-                ETa += tempETa;
-            }
-
-            // TODO qualche problema con i server
 
             //int sCount = 0;
             //for (Server s : servers) {
@@ -220,7 +258,6 @@ public class Scheduler {
 
 
         }
-        System.out.println("Eta run: " + tempETa);
         System.out.println(ETa / rRuns);
 
     }
