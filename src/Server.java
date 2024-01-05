@@ -28,9 +28,17 @@ public class Server {
     public Event getFirst() {
         return queue.getFirst();
     }
+    public Event getLast() {
+        return queue.getLast();
+    }
 
-    public boolean canExecute() {
-        return (queue.size() == 1);
+    public double getTotalTime() {
+        if (queue.isEmpty()) return 0;
+        double totalTime = 0;
+        for (Event e : queue) {
+            totalTime += e.getTime();
+        }
+        return totalTime;
     }
 
     @Override
