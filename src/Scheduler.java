@@ -88,6 +88,7 @@ public class Scheduler {
             int generated = 0, executed = 0;
             double tempAQTall = 0;
             double lastTime = 0;
+
             // initialize the scheduler every run
             initScheduler();
             // executing until nJobs are executed
@@ -104,23 +105,30 @@ public class Scheduler {
                 if (event.isArrival()) {
                     // System.out.println("temp time: " + servers.get(servCount % kServers).getTotalTime());
                     // tempAQTall += servers.get(servCount % kServers).getTotalTime() + event.getTime();
+                    double tempTime = 0;
+                    if (!servers.get(servCount % kServers).isEmpty()) {
+                        tempTime = servers.get(servCount % kServers).getLast().getTime();
+                    }
 
                     if (servers.get(servCount % kServers).addEvent(event)) {
                         Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
                         temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
                         temp.setIdServer(servCount % kServers);
                         prQueue.add(temp);
-                    } else {
-                        System.out.println("temp: " + servers.get(servCount % kServers).getLast().getTime());
-                        tempAQTall += servers.get(servCount % kServers).getLast().getTime();
                     }
+
+                    if (tempTime < event.getTime()) {
+                        System.out.println("[DEBUG] Time: " + (servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime()));
+                        // tempAQTall += servers.get(servCount % kServers).getLast().getTime() + (servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime());
+                        tempAQTall += servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime();
+
+                    }
+
                     servCount++;
 
                     if (nJobs < 20) System.out.println(event);
                     prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
                     generated++;
-
-
                 }
 
                 if (!event.isArrival()) {
@@ -130,7 +138,6 @@ public class Scheduler {
                         Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
                         temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
                         temp.setIdServer(event.getIdServer());
-                        tempAQTall += lastTime;
                         prQueue.add(temp);
                     }
 
@@ -138,6 +145,7 @@ public class Scheduler {
                     executed++;
 
                 }
+                System.out.println("tempAQTall:" + tempAQTall);
             }
             // sum the last time of execution
             ETa += tempETa;
