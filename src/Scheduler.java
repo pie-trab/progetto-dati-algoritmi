@@ -102,17 +102,17 @@ public class Scheduler {
                 Event event = prQueue.poll();
 
                 if (event.isArrival()) {
-
-
                     // System.out.println("temp time: " + servers.get(servCount % kServers).getTotalTime());
                     // tempAQTall += servers.get(servCount % kServers).getTotalTime() + event.getTime();
+
                     if (servers.get(servCount % kServers).addEvent(event)) {
                         Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
                         temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
                         temp.setIdServer(servCount % kServers);
-                        // server is empty so it doesn't wait
-                        tempAQTall += lastTime;
                         prQueue.add(temp);
+                    } else {
+                        System.out.println("temp: " + servers.get(servCount % kServers).getLast().getTime());
+                        tempAQTall += servers.get(servCount % kServers).getLast().getTime();
                     }
                     servCount++;
 
@@ -141,10 +141,10 @@ public class Scheduler {
             }
             // sum the last time of execution
             ETa += tempETa;
-            AQTall += tempAQTall / nJobs;
+            AQTall += tempAQTall;
         }
         System.out.println(ETa / rRuns);
-        System.out.println(AQTall / rRuns);
+        System.out.println(AQTall / (nJobs * rRuns));
     }
 
     public double getTimeLess(Event e) {
