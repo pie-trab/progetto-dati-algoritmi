@@ -3,6 +3,7 @@ import java.util.NoSuchElementException;
 
 public class Server {
     private LinkedList<Event> queue;
+    private double totalTime;
 
     public Server() {
         queue = new LinkedList<Event>();
@@ -10,6 +11,7 @@ public class Server {
 
     public boolean addEvent(Event e) {
         boolean temp = queue.isEmpty();
+        totalTime += e.getTime();
         queue.add(e);
         return temp;
     }
@@ -26,9 +28,17 @@ public class Server {
     public Event getFirst() {
         return queue.getFirst();
     }
+    public Event getLast() {
+        return queue.getLast();
+    }
 
-    public boolean canExecute() {
-        return (queue.size() == 1);
+    public double getTotalTime() {
+        if (queue.isEmpty()) return 0;
+        double totalTime = 0;
+        for (Event e : queue) {
+            totalTime += e.getTime();
+        }
+        return totalTime;
     }
 
     @Override

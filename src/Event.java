@@ -1,5 +1,6 @@
 public class Event implements Comparable<Event> {
     private boolean isArrival;
+    private boolean toPrint;
     private int catIndex;
     private double time;
     private double serviceTime = 0.0;
@@ -7,6 +8,13 @@ public class Event implements Comparable<Event> {
 
     public Event(boolean isArrival, double time, int catIndex) {
         this.isArrival = isArrival;
+        this.toPrint = false;
+        this.catIndex = catIndex;
+        this.time = time;
+    }
+    public Event(boolean isArrival, boolean toPrint, double time, int catIndex) {
+        this.isArrival = isArrival;
+        this.toPrint = toPrint;
         this.catIndex = catIndex;
         this.time = time;
     }
@@ -35,9 +43,19 @@ public class Event implements Comparable<Event> {
         return serviceTime;
     }
 
+    public boolean isToPrint() {
+        return toPrint;
+    }
+
+    public void setToPrint(boolean toPrint) {
+        this.toPrint = toPrint;
+    }
+
     public void setServiceTime(double serviceTime) {
         this.serviceTime = serviceTime;
     }
+
+
 
     public void setIdServer(int idServer) {
         this.idServer = idServer;
