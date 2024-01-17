@@ -5,7 +5,6 @@
 
 // Average Queue Time: ATQ-All(A, r) tempo medio di attesa in coda di un job A di categoria r
 
-import javax.xml.stream.util.EventReaderDelegate;
 import java.io.File;
 import java.util.*;
 
@@ -18,6 +17,111 @@ public class Scheduler {
     private int nJobs;
     private int rRuns;
     private int pPolicy;
+
+    public static void main(String[] args) {
+        Scheduler s = new Scheduler();
+
+        // s.schedule(".\\io_files\\input_pdf.in");
+        // s.schedule(".\\io_files\\input_K3_H2_N8_R1_P0.in");
+        // s.schedule(".\\io_files\\input_K6_H2_N6_R1_P0.in");
+        // s.schedule(".\\io_files\\input_K4_H3_N50_R10_P0.in");
+        s.schedule(".\\io_files\\input_K100_H3_N100000_R5_P0.in");
+        // TODO check this directory outside intellij project
+    }
+
+    public void schedule(String filePath) {
+        double tempETa = 0, ETa = 0, AQTall = 0;
+        int servCount = 0;
+
+        // gets parameters form file
+        getParameters(filePath);
+
+
+        double[] AQTcat = new double[hCategories];
+        double[] countAQTcat = new double[hCategories];
+        double[] avgService = new double[hCategories];
+
+
+        // prints the parameters for the output
+        // K, H, N, R, P
+        System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
+
+        for (int i = 0; i < rRuns; i++) {
+            int generated = 0, executed = 0;
+            double tempAQTall = 0;
+            double[] tempAQTcat = new double[hCategories];
+            int[] tempCountAQTcat = new int[hCategories];
+            double[] tempAvgService = new double[hCategories];
+
+            // initialize the scheduler every run
+            initScheduler();
+
+            // executing until nJobs are executed
+            while (executed != nJobs) {
+                ArrayList<Double> eventTimes = new ArrayList<>();
+                // discards jobs arrived after the nJobs spec
+                if (generated >= nJobs) {
+                    while (prQueue.peek().isArrival()) {
+                        prQueue.poll();
+                    }
+                }
+
+                Event event = prQueue.poll();
+
+                if (event.isArrival()) {
+                    if (servers.get(servCount % kServers).addEvent(event)) { // if server is empty
+                        Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
+                        temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
+                        temp.setIdServer(servCount % kServers);
+                        prQueue.add(temp);
+                    }
+
+                    servCount++;
+
+                    if (nJobs < 20) System.out.println(event);
+                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
+                    generated++;
+                }
+
+                if (!event.isArrival()) {
+                    tempETa = event.getTime();
+                    Event tempEvent = servers.get(event.getIdServer()).executeJob();
+                    tempAQTall += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                    tempAQTcat[event.getCat()] += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                    tempAvgService[event.getCat()] += event.getServiceTime();
+                    tempCountAQTcat[event.getCat()]++;
+
+
+                    if (!servers.get(event.getIdServer()).isEmpty()) {
+                        Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
+                        temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
+                        temp.setIdServer(event.getIdServer());
+                        prQueue.add(temp);
+
+                    }
+
+                    if (nJobs < 20) System.out.println(event);
+                    executed++;
+
+                }
+            }
+            // sum the last time of execution
+            ETa += tempETa;
+            System.out.println("tempETa: " + tempETa);
+            AQTall += tempAQTall / nJobs;
+            for (int j = 0; j < hCategories; j++) {
+                AQTcat[j] += tempAQTcat[j];
+                countAQTcat[j] += tempCountAQTcat[j];
+                avgService[j] += tempAvgService[j];
+            }
+
+        }
+        System.out.println(ETa / rRuns);
+        System.out.println(AQTall / rRuns);
+        for (int j = 0; j < hCategories; j++) {
+            System.out.println(countAQTcat[j] / rRuns +","+ AQTcat[j] / (countAQTcat[j]) + "," + (avgService[j] / countAQTcat[j]));
+        }
+    }
 
     /**
      * Extract the initial parameters from the input file
@@ -76,212 +180,16 @@ public class Scheduler {
         }
     }
 
-    public void schedule(String filePath) {
-        double tempETa = 0, ETa = 0, AQTall = 0;
-        int servCount = 0;
 
-        getParameters(filePath);
-        // K, H, N, R, P
-        System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
-
-        for (int i = 0; i < rRuns; i++) {
-            int generated = 0, executed = 0;
-            double tempAQTall = 0;
-            double lastTime = 0;
-
-            // initialize the scheduler every run
-            initScheduler();
-            // executing until nJobs are executed
-            while (executed != nJobs) {
-                // discards jobs arrived after the nJobs spec
-                if (generated >= nJobs) {
-                    while (prQueue.peek().isArrival()) {
-                        prQueue.poll();
-                    }
-                }
-
-                Event event = prQueue.poll();
-
-                if (event.isArrival()) {
-                    // System.out.println("temp time: " + servers.get(servCount % kServers).getTotalTime());
-                    // tempAQTall += servers.get(servCount % kServers).getTotalTime() + event.getTime();
-                    double tempTime = 0;
-                    if (!servers.get(servCount % kServers).isEmpty()) {
-                        tempTime = servers.get(servCount % kServers).getLast().getTime();
-                    }
-
-                    if (servers.get(servCount % kServers).addEvent(event)) {
-                        Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
-                        temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
-                        temp.setIdServer(servCount % kServers);
-                        prQueue.add(temp);
-                    }
-
-                    if (tempTime < event.getTime()) {
-                        System.out.println("[DEBUG] Time: " + (servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime()));
-                        // tempAQTall += servers.get(servCount % kServers).getLast().getTime() + (servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime());
-                        tempAQTall += servers.get(servCount % kServers).getLast().getTime() - event.getServiceTime();
-
-                    }
-
-                    servCount++;
-
-                    if (nJobs < 20) System.out.println(event);
-                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
-                    generated++;
-                }
-
-                if (!event.isArrival()) {
-                    tempETa = event.getTime();
-                    servers.get(event.getIdServer()).executeJob();
-                    if (!servers.get(event.getIdServer()).isEmpty()) {
-                        Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
-                        temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
-                        temp.setIdServer(event.getIdServer());
-                        prQueue.add(temp);
-                    }
-
-                    if (nJobs < 20) System.out.println(event);
-                    executed++;
-
-                }
-                System.out.println("tempAQTall:" + tempAQTall);
-            }
-            // sum the last time of execution
-            ETa += tempETa;
-            AQTall += tempAQTall;
-        }
-        System.out.println(ETa / rRuns);
-        System.out.println(AQTall / (nJobs * rRuns));
-    }
-
-    public double getTimeLess(Event e) {
-        double time = 0;
-        for (Event temp : prQueue) {
-            if (temp.compareTo(e) < 0) {
-                time += temp.getTime();
+    public double getGreaterTime(double time) {
+        double temp = 0;
+        for(Event e : prQueue){
+            if (e.getTime() > time && e.isArrival()){
+                temp += e.getTime();
             }
         }
-        return time;
-    }
 
-    public void while_schedule(String filePath) {
-        double tempETa = 0, ETa = 0, AQTall = 0;
-        int servCount = 0;
-
-        //prQueue = new PriorityQueue<>(nJobs);
-        //servers = new ArrayList<>(kServers);
-        getParameters(filePath);
-
-        // K, H, N, R, P
-        System.out.println(kServers + "," + hCategories + "," + nJobs + "," + rRuns + "," + pPolicy);
-
-
-        initScheduler(); // TODO prova a fare questo con la versione while (gli if per controllare se è da stampare o meno)
-
-        int i = 0, executed = 0, count = 0, runs = 0;
-        while (i != nJobs * rRuns || executed != nJobs * rRuns) {
-            if (executed % nJobs == 0 && executed != 0) initScheduler();
-
-
-            Event event = prQueue.poll();
-            //System.out.println("E: " + event);
-            //System.out.println("prima: " + printPrQueue());
-
-            if (event.isArrival()) {
-                if (servers.get(servCount % kServers).addEvent(event)) {
-                    Event temp = new Event(false, event.getTime() + categories.get(event.getCat()).newService(), event.getCat());
-                    temp.setServiceTime(categories.get(temp.getCat()).getServiceTime());
-                    temp.setIdServer(servCount % kServers);
-                    if (count < nJobs * rRuns) {
-                        temp.setToPrint(true);
-                        count++;
-                    }
-                    // System.out.println("category: " + event.getCat());
-                    // System.out.println("service time: " + categories.get(event.getCat()).getServiceTime());
-                    // System.out.println("Exec J: " + temp);
-                    prQueue.add(temp);
-                }
-                servCount++;
-
-                if (i < nJobs * rRuns) {
-                    if (nJobs < 20) System.out.println(event);
-                    prQueue.add(new Event(true, event.getTime() + categories.get(event.getCat()).newArrival(), event.getCat()));
-                    i++;
-                }
-            }
-
-            if (!event.isArrival()) {
-                if (executed % nJobs == 0) {
-                    tempETa = event.getTime(); // TODO tutti o solo quelli da stampare? in ogni caso viene sbagliato
-                    System.out.println("tmp: " + tempETa);
-                    ETa += tempETa;
-                }
-                if (event.isToPrint()) AQTall += event.getServiceTime();
-                servers.get(event.getIdServer()).executeJob();
-                if (!servers.get(event.getIdServer()).isEmpty()) {
-                    Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
-                    temp.setServiceTime(categories.get(servers.get(event.getIdServer()).getFirst().getCat()).getServiceTime());
-                    temp.setIdServer(event.getIdServer());
-                    if (count < nJobs * rRuns) {
-                        temp.setToPrint(true);
-                        count++;
-                    }
-                    prQueue.add(temp);
-                }
-                if (executed < nJobs * rRuns) {
-                    if (nJobs < 20) System.out.println(event);
-                    executed++;
-                }
-            }
-
-            //int sCount = 0;
-            //for (Server s : servers) {
-            //    System.out.println("S" + sCount + ": " + s);
-            //    sCount++;
-            //}
-
-            //System.out.println("toPrint: " + toPrint);
-            //System.out.println("dopo: " + printPrQueue());
-            //System.out.println("--------");
-            //System.out.println();
-
-
-        }
-        System.out.println(ETa / rRuns);
-
-    }
-
-    public void testSchedule(String filePath) {
-        int generated = 0, executed = 0, serverCount = 0;
-        getParameters(filePath);
-        initScheduler();
-
-        while (executed != nJobs) {
-            Event ev = prQueue.poll();
-
-            if (ev.isArrival() && executed < nJobs) {
-                // this tells me it the server is empty
-                if (servers.get(serverCount % kServers).addEvent(ev)) {
-                    Event temp = new Event(false, ev.getTime() + categories.get(ev.getCat()).newService(), ev.getCat());
-                    temp.setServiceTime(categories.get(ev.getCat()).getServiceTime());
-                    temp.setIdServer(serverCount % kServers);
-                    prQueue.add(temp);
-                }
-                if (nJobs < 20) {
-                    System.out.println(ev);
-                    prQueue.add(new Event(true, ev.getTime() + categories.get(ev.getCat()).newArrival(), ev.getCat()));
-                }
-                serverCount++;
-            }
-
-            // execute firts nJobs
-            if (!ev.isArrival() && generated < nJobs) {
-
-            }
-
-
-        }
+        return temp;
     }
 
     public String printPrQueue() {
