@@ -9,27 +9,25 @@ import java.io.File;
 import java.util.*;
 
 public class Scheduler {
-    private PriorityQueue<Event> prQueue;
-    private ArrayList<Server> servers;
-    public ArrayList<Category> categories;
-    private int kServers;
-    private int hCategories;
-    private int nJobs;
-    private int rRuns;
-    private int pPolicy;
+    private static PriorityQueue<Event> prQueue;
+    private static ArrayList<Server> servers;
+    public static ArrayList<Category> categories;
+    private static int kServers;
+    private static int hCategories;
+    private static int nJobs;
+    private static int rRuns;
+    private static int pPolicy;
 
     public static void main(String[] args) {
         Scheduler s = new Scheduler();
 
-        // s.schedule(".\\io_files\\input_pdf.in");
-        // s.schedule(".\\io_files\\input_K3_H2_N8_R1_P0.in");
-        // s.schedule(".\\io_files\\input_K6_H2_N6_R1_P0.in");
-        // s.schedule(".\\io_files\\input_K4_H3_N50_R10_P0.in");
-        s.schedule(".\\io_files\\input_K100_H3_N100000_R5_P0.in");
+
+        //s.schedule(".\\io_files\\input_pdf.in");
+        s.schedule(".\\io_files\\input_K4_H3_N50_R10_P0.in");
         // TODO check this directory outside intellij project
     }
 
-    public void schedule(String filePath) {
+    public static void schedule(String filePath) {
         double tempETa = 0, ETa = 0, AQTall = 0;
         int servCount = 0;
 
@@ -86,11 +84,17 @@ public class Scheduler {
                 if (!event.isArrival()) {
                     tempETa = event.getTime();
                     Event tempEvent = servers.get(event.getIdServer()).executeJob();
-                    tempAQTall += event.getTime() - event.getServiceTime() - tempEvent.getTime();
-                    tempAQTcat[event.getCat()] += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                    if (event.getTime() - event.getServiceTime() >= tempEvent.getTime()) {
+                        tempAQTall += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                        tempAQTcat[event.getCat()] += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                    } else {
+                        tempAQTall += tempEvent.getTime();
+                        tempAQTcat[event.getCat()] += tempEvent.getTime();
+                    }
+                    // tempAQTall += event.getTime() - event.getServiceTime() - tempEvent.getTime();
+                    // tempAQTcat[event.getCat()] += event.getTime() - event.getServiceTime() - tempEvent.getTime();
                     tempAvgService[event.getCat()] += event.getServiceTime();
                     tempCountAQTcat[event.getCat()]++;
-
 
                     if (!servers.get(event.getIdServer()).isEmpty()) {
                         Event temp = new Event(false, event.getTime() + categories.get(servers.get(event.getIdServer()).getFirst().getCat()).newService(), servers.get(event.getIdServer()).getFirst().getCat());
@@ -107,7 +111,6 @@ public class Scheduler {
             }
             // sum the last time of execution
             ETa += tempETa;
-            System.out.println("tempETa: " + tempETa);
             AQTall += tempAQTall / nJobs;
             for (int j = 0; j < hCategories; j++) {
                 AQTcat[j] += tempAQTcat[j];
@@ -119,7 +122,7 @@ public class Scheduler {
         System.out.println(ETa / rRuns);
         System.out.println(AQTall / rRuns);
         for (int j = 0; j < hCategories; j++) {
-            System.out.println(countAQTcat[j] / rRuns +","+ AQTcat[j] / (countAQTcat[j]) + "," + (avgService[j] / countAQTcat[j]));
+            System.out.println(countAQTcat[j] / rRuns + "," + ((AQTcat[j]) / countAQTcat[j]) + "," + (avgService[j] / countAQTcat[j]));
         }
     }
 
@@ -128,7 +131,7 @@ public class Scheduler {
      *
      * @param filePath input file path
      */
-    public void getParameters(String filePath) {
+    public static void getParameters(String filePath) {
         try {
             File inputFile = new File(filePath);
             Scanner myReader = new Scanner(inputFile);
@@ -164,7 +167,7 @@ public class Scheduler {
     /**
      * Initialises the scheduler initializing and filling with the starting jobs the prQueue and initializing the servers
      */
-    public void initScheduler() {
+    public static void initScheduler() {
         servers = new ArrayList<>(kServers);
         prQueue = new PriorityQueue<>(nJobs);
 
@@ -183,8 +186,8 @@ public class Scheduler {
 
     public double getGreaterTime(double time) {
         double temp = 0;
-        for(Event e : prQueue){
-            if (e.getTime() > time && e.isArrival()){
+        for (Event e : prQueue) {
+            if (e.getTime() > time && e.isArrival()) {
                 temp += e.getTime();
             }
         }
