@@ -1,3 +1,6 @@
+/*
+    Trabuio Pietro, 2066686
+ */
 public class Event implements Comparable<Event> {
     private boolean isArrival;
     private int catIndex;

@@ -1,4 +1,6 @@
 /*
+    Trabuio Pietro, 2066686
+
     Personalized policy
     The personalized scheduling policy is based on choosing the least "busy" server. To do so, a job is assigned to
     the server with the least total time (the sum of the time of all events in queue). To find it, it's checked the Server

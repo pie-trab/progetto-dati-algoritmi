@@ -1,3 +1,7 @@
+/*
+    Trabuio Pietro, 2066686
+ */
+
 import java.util.Random;
 
 public class Category {

@@ -1,3 +1,7 @@
+/*
+    Trabuio Pietro, 2066686
+ */
+
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 
